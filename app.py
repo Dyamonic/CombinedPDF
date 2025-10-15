@@ -7,12 +7,11 @@ import tkinter as tk
 from tkinter import filedialog, messagebox
 
 from PIL import Image, ImageTk, ImageDraw
-import fitz  # PyMuPDF
+import fitz
 from pypdf import PdfReader, PdfWriter
 
 
 class PDFMergerApp(tk.Tk):
-    """Dark-themed UI to preview PDFs and merge (file1 appended to file2)."""
 
     def __init__(self) -> None:
         super().__init__()
@@ -20,17 +19,15 @@ class PDFMergerApp(tk.Tk):
         self.geometry("1100x700")
         self.minsize(1000, 620)
 
-        # Paths and state
         self.pdf1_path: Optional[str] = None
         self.pdf2_path: Optional[str] = None
         self.merged_pdf_path: Optional[str] = None
         self._rendered_images: List[ImageTk.PhotoImage] = []
         self._page_labels: List[tk.Label] = []
-        self._page_render_info: List[dict] = []  # per page: {'zoom': float}
+        self._page_render_info: List[dict] = []
 
         self.preview_zoom: float = 1.0
 
-        # Colors (similar to the screenshot's dark theme)
         self.bg_color = "#1e1e1e"
         self.panel_color = "#2b2b2b"
         self.accent_blue = "#3fa7ff"
@@ -44,7 +41,6 @@ class PDFMergerApp(tk.Tk):
         self._set_window_icon()
         self._build_layout()
 
-    # --------------------------- UI Construction --------------------------- #
     def _build_layout(self) -> None:
         left = tk.Frame(self, bg=self.bg_color)
         left.pack(side=tk.LEFT, fill=tk.Y, padx=10, pady=10)
@@ -90,7 +86,6 @@ class PDFMergerApp(tk.Tk):
         return tk.Label(parent, text=text, bg=self.panel_color, fg=self.dim_text, anchor="w")
 
     def _build_left_controls(self, parent: tk.Widget) -> None:
-        # Actions
         actions = self._section(parent, "Actions")
         self._button(actions, "Open PDF", self.accent_blue, self._open_single_pdf).pack(fill=tk.X)
         tk.Frame(actions, height=8, bg=self.panel_color).pack(fill=tk.X)
@@ -103,7 +98,6 @@ class PDFMergerApp(tk.Tk):
         tk.Frame(btn_row, width=8, bg=self.panel_color).pack(side=tk.LEFT)
         self._button(btn_row, "Clear", self.accent_red, self._clear_all).pack(side=tk.LEFT, expand=True, fill=tk.X)
 
-        # Status box
         status_sec = self._section(parent, "Status")
         self.status_text = tk.Text(status_sec, height=14, bg="#151515", fg=self.text_color, bd=0)
         self.status_text.pack(fill=tk.BOTH, expand=True)
@@ -113,7 +107,6 @@ class PDFMergerApp(tk.Tk):
         header = tk.Label(parent, text="Preview", bg=self.bg_color, fg=self.text_color, anchor="w")
         header.pack(fill=tk.X, pady=(0, 6))
 
-        # Toolbar: zoom controls
         toolbar = tk.Frame(parent, bg=self.bg_color)
         toolbar.pack(fill=tk.X, pady=(0, 6))
 
@@ -135,12 +128,9 @@ class PDFMergerApp(tk.Tk):
         self.zoom_scale.pack(side=tk.LEFT, padx=8)
         self._button(toolbar, "+", self.accent_blue, lambda: self._change_zoom(+0.1)).pack(side=tk.LEFT)
 
-        # (Edit mode removed)
-
         container = tk.Frame(parent, bg=self.bg_color)
         container.pack(fill=tk.BOTH, expand=True)
 
-        # Preview (image) panel
         self.preview_canvas = tk.Canvas(container, bg="#0f0f0f", highlightthickness=0)
         vscroll = tk.Scrollbar(container, orient="vertical", command=self.preview_canvas.yview)
         self.preview_canvas.configure(yscrollcommand=vscroll.set)
@@ -152,24 +142,19 @@ class PDFMergerApp(tk.Tk):
         self.preview_window = self.preview_canvas.create_window((0, 0), window=self.preview_inner, anchor="nw")
 
         def _on_configure(event):
-            # Update scrollregion and keep inner width synced to canvas width
             self.preview_canvas.configure(scrollregion=self.preview_canvas.bbox("all"))
             self.preview_canvas.itemconfig(self.preview_window, width=event.width)
 
         self.preview_inner.bind("<Configure>", lambda e: self.preview_canvas.configure(scrollregion=self.preview_canvas.bbox("all")))
         self.preview_canvas.bind("<Configure>", _on_configure)
-        # Ctrl + mousewheel to zoom
         self.preview_canvas.bind_all("<Control-MouseWheel>", self._on_mousewheel_zoom)
-        # Normal mouse wheel to scroll
         self.preview_canvas.bind("<MouseWheel>", self._on_mousewheel_scroll)
         self.preview_inner.bind("<MouseWheel>", self._on_mousewheel_scroll)
-        # Linux scroll events
         self.preview_canvas.bind("<Button-4>", lambda e: self.preview_canvas.yview_scroll(-3, "units"))
         self.preview_canvas.bind("<Button-5>", lambda e: self.preview_canvas.yview_scroll(3, "units"))
 
-        # Note: Preview only
+        
 
-    # --------------------------- Actions & Helpers -------------------------- #
     def _log(self, message: str) -> None:
         self.status_text.insert(tk.END, f"{message}\n")
         self.status_text.see(tk.END)
@@ -208,7 +193,7 @@ class PDFMergerApp(tk.Tk):
             filetypes=[("PDF files", "*.pdf")],
         )
         if path:
-            self.merged_pdf_path = path  # allow Save As
+            self.merged_pdf_path = path
             self._log(f"Opened PDF for preview: {path}")
             self._render_preview(path)
 
@@ -219,7 +204,6 @@ class PDFMergerApp(tk.Tk):
         dlg.geometry("460x220")
         dlg.resizable(False, False)
 
-        # Padded container so inner widgets align and buttons fit edge-to-edge
         container = tk.Frame(dlg, bg=self.panel_color, padx=12, pady=12)
         container.pack(fill=tk.BOTH, expand=True)
 
@@ -262,7 +246,6 @@ class PDFMergerApp(tk.Tk):
         try:
             writer = PdfWriter()
 
-            # Order: PDF 2 first, then PDF 1 appended
             for src in (self.pdf2_path, self.pdf1_path):
                 reader = PdfReader(src)
                 for page in reader.pages:
@@ -288,7 +271,6 @@ class PDFMergerApp(tk.Tk):
             pass
 
     def _render_preview(self, pdf_path: str) -> None:
-        # Clear old preview completely (all widgets inside preview_inner)
         try:
             for child in list(self.preview_inner.winfo_children()):
                 try:
@@ -311,10 +293,7 @@ class PDFMergerApp(tk.Tk):
             self._log(f"Error opening merged PDF for preview: {exc}")
             return
 
-        # If in text-edit mode, fill editor with extracted text of all pages
-        # Reset any previous overlay bookkeeping
-
-        # Determine scale to fit canvas width, with user zoom multiplier
+        
         base_width = max(700, self.preview_canvas.winfo_width() - 20)
         target_width = base_width * max(0.5, min(2.0, self.preview_zoom))
         for i, page in enumerate(doc):
@@ -323,7 +302,7 @@ class PDFMergerApp(tk.Tk):
             pix = page.get_pixmap(matrix=mat, alpha=False)
             img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
             photo = ImageTk.PhotoImage(img)
-            self._rendered_images.append(photo)  # keep reference
+            self._rendered_images.append(photo)
             page_container = tk.Frame(self.preview_inner, bg="#0f0f0f")
             page_container.pack(fill=tk.X, pady=6)
 
@@ -332,7 +311,6 @@ class PDFMergerApp(tk.Tk):
             self._page_labels.append(lbl)
             self._page_render_info.append({"zoom": zoom})
 
-            # Bind interactions per page
             lbl.bind("<Button-3>", lambda e, idx=i: self._on_page_context_menu(idx, e))
             lbl.bind("<Button-1>", lambda e, idx=i: self._on_page_left_click(idx, e))
 
@@ -364,7 +342,6 @@ class PDFMergerApp(tk.Tk):
         self._log("Cleared selection and preview.")
 
     def _render_preview_empty(self) -> None:
-        # Destroy every child widget in the preview area
         try:
             for child in list(self.preview_inner.winfo_children()):
                 try:
@@ -376,7 +353,6 @@ class PDFMergerApp(tk.Tk):
         self._page_labels.clear()
         self._rendered_images.clear()
 
-    # --------------------------- Preview controls -------------------------- #
     def _change_zoom(self, delta: float) -> None:
         new_zoom = max(0.5, min(2.0, self.preview_zoom + delta))
         self.preview_zoom = new_zoom
@@ -400,16 +376,14 @@ class PDFMergerApp(tk.Tk):
         self._change_zoom(0.1 * direction)
 
     def _on_mousewheel_scroll(self, event) -> None:
-        # Ignore if Ctrl is pressed (handled by zoom handler)
         try:
-            if (event.state & 0x0004) != 0:  # Control modifier
+            if (event.state & 0x0004) != 0:
                 return
         except Exception:
             pass
         delta = -1 if event.delta > 0 else 1
         self.preview_canvas.yview_scroll(delta * 3, "units")
 
-    # --------------------------- Icon helpers ------------------------------ #
     def _set_window_icon(self) -> None:
         try:
             base_dir = os.path.dirname(os.path.abspath(__file__))
@@ -423,11 +397,9 @@ class PDFMergerApp(tk.Tk):
                 img.save(ico_path, format="ICO", sizes=[(16,16),(24,24),(32,32),(48,48),(64,64),(128,128),(256,256)])
                 img.save(png_path, format="PNG")
             else:
-                # Ensure PNG exists for iconphoto
                 if not os.path.exists(png_path):
                     Image.open(ico_path).save(png_path, format="PNG")
 
-            # Set icon for window and taskbar (taskbar requires .ico on Windows)
             try:
                 self.iconbitmap(ico_path)
             except Exception:
@@ -435,34 +407,24 @@ class PDFMergerApp(tk.Tk):
             try:
                 icon_img = tk.PhotoImage(file=png_path)
                 self.iconphoto(True, icon_img)
-                # Keep reference
                 self._icon_photo = icon_img
             except Exception:
                 pass
         except Exception:
-            # Non-fatal: icon setting failed
             pass
 
     def _generate_icon_image(self, size: int) -> Image.Image:
-        # Simple modern icon: white page with blue folded corner and dark background circle
         img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
         d = ImageDraw.Draw(img)
-        # background circle
         margin = int(size * 0.06)
         d.ellipse([margin, margin, size - margin, size - margin], fill=(34, 34, 34, 255))
-
-        # document rectangle
         pad = int(size * 0.22)
         rect = [pad, pad, size - pad, size - pad]
         d.rounded_rectangle(rect, radius=int(size * 0.06), fill=(255, 255, 255, 255))
-
-        # folded corner
         fold = int(size * 0.14)
         x1, y1, x2, y2 = rect
         fold_poly = [(x2 - fold, y1), (x2, y1), (x2, y1 + fold)]
         d.polygon(fold_poly, fill=(63, 167, 255, 255))
-
-        # small chain-like glyph to hint at combine
         cx = (x1 + x2) // 2
         cy = (y1 + y2) // 2
         r = int(size * 0.08)
