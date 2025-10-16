@@ -15,6 +15,9 @@ A professional Python desktop app to quickly preview and merge PDF files with a 
 ### Preview
 ![Preview & Zoom](assets/Fully_Interface.png)
 
+### Settings
+![Settings](assets/Setting_Interface.png)
+
 ## ✨ Features
 
 - 🧭 **Simple Workflow**: Two actions on the left – Open PDF and Merge PDF
